@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Лабораторная работа 1. Цветовые модели (100 баллов).
-Вариант (чётный): CMYK — RGB — HSV.
-
-Возможности приложения:
-  * задание цвета полями ввода (точно);
-  * задание цвета ползунками (плавно);
-  * выбор цвета из палитры / системного диалога / по HEX-коду;
-  * автоматический пересчёт цвета во всех трёх моделях при изменении любой координаты.
-"""
 
 import tkinter as tk
 from tkinter import colorchooser
@@ -16,10 +6,6 @@ import random
 
 BG = "#f2f2f2"
 
-
-# =========================================================================
-#                     ПРЕОБРАЗОВАНИЯ ЦВЕТОВЫХ МОДЕЛЕЙ
-# =========================================================================
 
 def rgb_to_cmyk(r, g, b):
     """RGB (0..255) -> CMYK (каждая компонента 0..1)."""
@@ -59,7 +45,6 @@ def rgb_to_hsv(r, g, b):
         h = 60.0 * ((r_ - g_) / d + 4)
     return h % 360.0, s, v
 
-
 def hsv_to_rgb(h, s, v):
     """HSV (H: 0..360, S: 0..1, V: 0..1) -> RGB (0..255)."""
     h = h % 360.0
@@ -81,12 +66,8 @@ def hsv_to_rgb(h, s, v):
     return (rp + m) * 255.0, (gp + m) * 255.0, (bp + m) * 255.0
 
 
-# =========================================================================
-#                     ВИДЖЕТ "КООРДИНАТА ЦВЕТА"
-# =========================================================================
 
 class Channel:
-    """Одна координата цвета: подпись + ползунок + поле ввода."""
 
     def __init__(self, parent, row, label, lo, hi, model, key, owner, trough):
         self.model = model
@@ -116,7 +97,6 @@ class Channel:
         self.entry.bind("<KP_Enter>", self._on_entry)
         self.entry.bind("<FocusOut>", self._on_entry)
 
-    # --- обработчики -----------------------------------------------------
     def _on_scale(self, _=None):
         if self._silent:
             return
@@ -138,7 +118,6 @@ class Channel:
         self._silent = False
         self.owner.on_channel_change(self)
 
-    # --- API -------------------------------------------------------------
     def get(self):
         return self.var.get()
 
@@ -150,20 +129,14 @@ class Channel:
         self._silent = False
 
 
-# =========================================================================
-#                          ГЛАВНОЕ ПРИЛОЖЕНИЕ
-# =========================================================================
-
 class ColorApp:
     def __init__(self, root):
         self.root = root
-        root.title("Лабораторная работа 1 — Цветовые модели: CMYK / RGB / HSV")
+        root.title("Лабораторная работа 1 — Цветовые модели: CMYK / RGB / HSV. Онищук Тимофей")
         root.configure(bg=BG)
         root.resizable(False, False)
 
         self.updating = False
-        # "Мастер-состояние" хранится в HSV (H:0..360, S:0..1, V:0..1) —
-        # так не теряется оттенок при переходе через чёрный/серый.
         self.h, self.s, self.v = 0.0, 0.0, 0.0
 
         main = tk.Frame(root, bg=BG, padx=12, pady=12)
@@ -174,6 +147,12 @@ class ColorApp:
         right = tk.Frame(main, bg=BG)
         right.grid(row=0, column=1, sticky="n", padx=(18, 0))
 
+
+        tk.Label(right,
+                 text="Онищук Тимофей"
+                      "",
+                 bg=BG, fg="#555555", justify="left",
+                 font=("Segoe UI", 9, "italic")).pack(anchor="w", pady=(10, 0))
         # ---------------- CMYK ----------------
         gb = tk.LabelFrame(left, text=" CMYK  (0–100 %) ", bg=BG,
                            font=("Segoe UI", 10, "bold"), padx=4, pady=4)
@@ -204,7 +183,7 @@ class ColorApp:
                         "y": self.ch_y, "k": self.ch_k}
         self.hsv_ch = {"h": self.ch_h, "s": self.ch_s, "v": self.ch_v}
 
-        # ================= ПРАВАЯ ПАНЕЛЬ =================
+        # right
         prev = tk.LabelFrame(right, text=" Предпросмотр ", bg=BG,
                              font=("Segoe UI", 10, "bold"), padx=8, pady=8)
         prev.pack(fill="x")
@@ -229,7 +208,7 @@ class ColorApp:
         tk.Button(prev, text="Выбрать цвет…", command=self._choose_color,
                   font=("Segoe UI", 10)).pack(fill="x", pady=(8, 0))
 
-        # ---------------- Палитра ----------------
+        # pal 
         pal = tk.LabelFrame(right, text=" Палитра ", bg=BG,
                             font=("Segoe UI", 10, "bold"), padx=6, pady=6)
         pal.pack(fill="x", pady=(10, 0))
@@ -253,7 +232,6 @@ class ColorApp:
                  bg=BG, fg="#555555", justify="left",
                  font=("Segoe UI", 9, "italic")).pack(anchor="w", pady=(10, 0))
 
-        # стартовый цвет
         self.set_rgb(0, 120, 215)
 
     # ------------------------------------------------------------------
