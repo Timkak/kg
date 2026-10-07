@@ -1,0 +1,159 @@
+\documentclass[14pt,a4paper]{extarticle}
+
+% -------------------- Пакеты --------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{geometry}
+\geometry{
+	left=25mm,
+	right=20mm,
+	top=20mm,
+	bottom=20mm
+}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Настройка оформления кода
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codebg}{rgb}{0.97,0.97,0.97}
+\definecolor{keywordcolor}{rgb}{0.0,0.2,0.7}
+
+\lstset{
+	backgroundcolor=\color{codebg},
+	basicstyle=\ttfamily\footnotesize,
+	breaklines=true,
+	captionpos=b,
+	commentstyle=\color{codegray},
+	keywordstyle=\color{keywordcolor}\bfseries,
+	numbers=left,
+	numbersep=6pt,
+	numberstyle=\tiny\color{codegray},
+	frame=single,
+	rulecolor=\color{black!20},
+	showstringspaces=false,
+	tabsize=4
+}
+
+\begin{document}
+
+% -------------------- Шапка --------------------
+\begin{flushright}
+Дисциплина: Компьютерная графика\\
+Студент: Онищук Тимофей Дмитриевич\\
+Группа: 3 курс, 2 группа\\
+Вариант: Чётный (CMYK -- RGB -- HSV)
+\end{flushright}
+
+\vspace{1.0cm}
+
+% -------------------- Заголовки --------------------
+\begin{center}
+\textbf{Отчёт по лабораторной работе №1}\\
+\textbf{Тема: Цветовые модели: CMYK, RGB, HSV и взаимные преобразования}
+\end{center}
+
+\vspace{0.5cm}
+
+% -------------------- Текст --------------------
+\noindent\textbf{1. Цель работы}
+
+Изучение физических принципов и математических моделей представления цвета (RGB, CMYK, HSV), реализация взаимных переходов между ними и разработка интерактивного графического приложения с мгновенным синхронным пересчётом параметров во всех трёх пространствах.
+
+\vspace{0.5cm}
+\noindent\textbf{2. Теоретические сведения и формулы преобразования}
+
+\textbf{2.1. Модель RGB $\leftrightarrow$ CMYK}
+
+Аддитивная модель RGB описывает излучаемый свет ($R, G, B \in [0, 255]$), а субтрактивная CMYK — отражённый ($C, M, Y, K \in [0, 1]$).
+Пусть нормированные компоненты $R' = R / 255$, $G' = G / 255$, $B' = B / 255$. Тогда прямой перевод (RGB $\to$ CMYK) выполняется по формулам:
+\begin{align*}
+K &= 1 - \max(R', G', B'), \\
+C &= \frac{1 - R' - K}{1 - K}, \quad M = \frac{1 - G' - K}{1 - K}, \quad Y = \frac{1 - B' - K}{1 - K} \quad (\text{при } K < 1).
+\end{align*}
+Если $R = G = B = 0$, то $C = M = Y = 0$, $K = 1$. Обратное преобразование (CMYK $\to$ RGB):
+\[
+R = 255 \cdot (1 - C) \cdot (1 - K), \quad G = 255 \cdot (1 - M) \cdot (1 - K), \quad B = 255 \cdot (1 - Y) \cdot (1 - K).
+\]
+
+\textbf{2.2. Модель RGB $\leftrightarrow$ HSV}
+
+Модель HSV описывает цвет в цилиндрических координатах: цветовой тон $H \in [0^\circ, 360^\circ]$, насыщенность $S \in [0, 1]$ и яркость $V \in [0, 1]$.
+Пусть $V = \max(R', G', B')$, $\Delta = V - \min(R', G', B')$.
+\[
+S = \begin{cases} 0, & V = 0 \\ \frac{\Delta}{V}, & V \neq 0 \end{cases}, \qquad
+H = \begin{cases} 
+0^\circ, & \Delta = 0 \\
+60^\circ \cdot \left(\frac{G' - B'}{\Delta} \bmod 6\right), & V = R' \\
+60^\circ \cdot \left(\frac{B' - R'}{\Delta} + 2\right), & V = G' \\
+60^\circ \cdot \left(\frac{R' - G'}{\Delta} + 4\right), & V = B'
+\end{cases}
+\]
+
+Обратный перевод из HSV в RGB выполняется вычислением вспомогательных величин $C = V \cdot S$, $X = C \cdot (1 - |(H / 60^\circ) \bmod 2 - 1|)$ и $m = V - C$, после чего промежуточные значения $(R_1, G_1, B_1)$ в зависимости от сектора угла $H$ смещаются на $m$ и масштабируются на 255.
+
+\vspace{0.5cm}
+\noindent\textbf{3. Описание интерфейса и способов задания цвета}
+
+Приложение реализовано на языке Python с использованием библиотеки графического интерфейса \texttt{tkinter}. В соответствии с заданием обеспечены 3 способа ввода цвета:
+\begin{enumerate}
+    \item \textbf{Плавное изменение ползунками (Scale)}: для каждого из 10 каналов предусмотрены независимые горизонтальные шкалы.
+    \item \textbf{Точный численный ввод (Entry)}: текстовые поля с валидацией ввода для прямого указания значений (RGB: 0--255, CMYK: 0--100\,\%, HSV: 0--360$^\circ$, 0--100\,\%).
+    \item \textbf{Выбор из палитры и пипетки}: встроенная сетка дискретных цветовых образцов (swatches), диалоговое окно системной палитры \texttt{colorchooser}, поле ввода шестнадцатеричного кода (HEX) и генератор случайного цвета.
+\end{enumerate}
+
+\vspace{0.5cm}
+
+\newpage
+\noindent\textbf{4. Скриншот работающего приложения}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.88\textwidth]{app_screenshot.png}
+\end{figure}
+
+\vspace{0.5cm}
+\noindent\textbf{5. Ключевые фрагменты программного кода}
+
+\begin{lstlisting}[language=Python, caption={Математические функции взаимного преобразования}]
+def rgb_to_cmyk(r, g, b):
+    if r == 0 and g == 0 and b == 0:
+        return 0.0, 0.0, 0.0, 1.0
+    r_, g_, b_ = r / 255.0, g / 255.0, b / 255.0
+    k = 1.0 - max(r_, g_, b_)
+    c = (1.0 - r_ - k) / (1.0 - k)
+    m = (1.0 - g_ - k) / (1.0 - k)
+    y = (1.0 - b_ - k) / (1.0 - k)
+    return c, m, y, k
+
+def cmyk_to_rgb(c, m, y, k):
+    r = 255.0 * (1.0 - c) * (1.0 - k)
+    g = 255.0 * (1.0 - m) * (1.0 - k)
+    b = 255.0 * (1.0 - y) * (1.0 - k)
+    return r, g, b
+
+def hsv_to_rgb(h, s, v):
+    h = h % 360.0
+    c = v * s
+    x = c * (1 - abs((h / 60.0) % 2 - 1))
+    m = v - c
+    if h < 60:    rp, gp, bp = c, x, 0
+    elif h < 120: rp, gp, bp = x, c, 0
+    elif h < 180: rp, gp, bp = 0, c, x
+    elif h < 240: rp, gp, bp = 0, x, c
+    elif h < 300: rp, gp, bp = x, 0, c
+    else:         rp, gp, bp = c, 0, x
+    return (rp + m) * 255.0, (gp + m) * 255.0, (bp + m) * 255.0
+\end{lstlisting}
+
+\vspace{0.5cm}
+\noindent\textbf{6. Вывод}
+
+В ходе выполнения лабораторной работы были изучены аддитивные, субтрактивные и перцептивные принципы формирования цвета. Разработано графическое приложение, реализующее мгновенную синхронизацию между моделями CMYK, RGB и HSV тремя независимыми способами ввода. Устранены краевые эффекты нормализации угла $H$ и зацикливания обратного расчёта CMYK.
+
+\end{document}

@@ -45,6 +45,7 @@ def rgb_to_hsv(r, g, b):
         h = 60.0 * ((r_ - g_) / d + 4)
     return h % 360.0, s, v
 
+
 def hsv_to_rgb(h, s, v):
     """HSV (H: 0..360, S: 0..1, V: 0..1) -> RGB (0..255)."""
     h = h % 360.0
@@ -66,9 +67,7 @@ def hsv_to_rgb(h, s, v):
     return (rp + m) * 255.0, (gp + m) * 255.0, (bp + m) * 255.0
 
 
-
 class Channel:
-
     def __init__(self, parent, row, label, lo, hi, model, key, owner, trough):
         self.model = model
         self.key = key
@@ -147,12 +146,11 @@ class ColorApp:
         right = tk.Frame(main, bg=BG)
         right.grid(row=0, column=1, sticky="n", padx=(18, 0))
 
-
         tk.Label(right,
-                 text="Онищук Тимофей"
-                      "",
+                 text="Онищук Тимофей",
                  bg=BG, fg="#555555", justify="left",
                  font=("Segoe UI", 9, "italic")).pack(anchor="w", pady=(10, 0))
+
         # ---------------- CMYK ----------------
         gb = tk.LabelFrame(left, text=" CMYK  (0–100 %) ", bg=BG,
                            font=("Segoe UI", 10, "bold"), padx=4, pady=4)
@@ -183,7 +181,7 @@ class ColorApp:
                         "y": self.ch_y, "k": self.ch_k}
         self.hsv_ch = {"h": self.ch_h, "s": self.ch_s, "v": self.ch_v}
 
-        # right
+        # ---------------- Preview & Palette ----------------
         prev = tk.LabelFrame(right, text=" Предпросмотр ", bg=BG,
                              font=("Segoe UI", 10, "bold"), padx=8, pady=8)
         prev.pack(fill="x")
@@ -208,7 +206,6 @@ class ColorApp:
         tk.Button(prev, text="Выбрать цвет…", command=self._choose_color,
                   font=("Segoe UI", 10)).pack(fill="x", pady=(8, 0))
 
-        # pal 
         pal = tk.LabelFrame(right, text=" Палитра ", bg=BG,
                             font=("Segoe UI", 10, "bold"), padx=6, pady=6)
         pal.pack(fill="x", pady=(10, 0))
@@ -234,7 +231,6 @@ class ColorApp:
 
         self.set_rgb(0, 120, 215)
 
-    # ------------------------------------------------------------------
     def _swatch(self, parent, r, c, rgb):
         hexs = "#%02X%02X%02X" % rgb
         cv = tk.Canvas(parent, width=17, height=17, bg=hexs,
@@ -243,83 +239,116 @@ class ColorApp:
         cv.grid(row=r, column=c, padx=1, pady=1)
         cv.bind("<Button-1>", lambda e, col=rgb: self.set_rgb(*col))
 
-    # ------------------------------------------------------------------
+    def _update_preview_and_hex(self, ri, gi, bi):
+        hexs = "#%02X%02X%02X" % (ri, gi, bi)
+        self.preview.config(bg=hexs)
+        self.hex_var.set(hexs)
+
+    def _update_rgb_ui(self, ri, gi, bi):
+        self.rgb_ch["r"].set(ri)
+        self.rgb_ch["g"].set(gi)
+        self.rgb_ch["b"].set(bi)
+
+    def _update_cmyk_ui(self, c, m, y, k):
+        self.cmyk_ch["c"].set(round(c * 100))
+        self.cmyk_ch["m"].set(round(m * 100))
+        self.cmyk_ch["y"].set(round(y * 100))
+        self.cmyk_ch["k"].set(round(k * 100))
+
+    def _update_hsv_ui(self, h, s, v):
+        h_disp = round(h)
+        if h_disp >= 360:
+            h_disp = 0
+        self.hsv_ch["h"].set(h_disp)
+        self.hsv_ch["s"].set(round(s * 100))
+        self.hsv_ch["v"].set(round(v * 100))
+
     def set_rgb(self, r, g, b):
-        """Установить цвет по RGB и пересчитать всё."""
-        h, s, v = rgb_to_hsv(r, g, b)
-        if s == 0.0:            # для серых/чёрных оттенок не определён —
-            h = self.h          # сохраняем текущий
-        self.h, self.s, self.v = h, s, v
-        self.refresh()
-
-    # ------------------------------------------------------------------
-    def on_channel_change(self, ch):
-        """Пользователь изменил одну из координат цвета."""
-        if self.updating:
-            return
-
-        if ch.model == "rgb":
-            r = self.rgb_ch["r"].get()
-            g = self.rgb_ch["g"].get()
-            b = self.rgb_ch["b"].get()
-            h, s, v = rgb_to_hsv(r, g, b)
-            if s == 0.0:
-                h = self.h
-            self.h, self.s, self.v = h, s, v
-
-        elif ch.model == "cmyk":
-            c = self.cmyk_ch["c"].get() / 100.0
-            m = self.cmyk_ch["m"].get() / 100.0
-            y = self.cmyk_ch["y"].get() / 100.0
-            k = self.cmyk_ch["k"].get() / 100.0
-            r, g, b = cmyk_to_rgb(c, m, y, k)
-            h, s, v = rgb_to_hsv(r, g, b)
-            if s == 0.0:
-                h = self.h
-            self.h, self.s, self.v = h, s, v
-
-        else:  # hsv — обновляем только изменённую координату
-            if ch.key == "h":
-                self.h = ch.get()
-            elif ch.key == "s":
-                self.s = ch.get() / 100.0
-            else:
-                self.v = ch.get() / 100.0
-
-        self.refresh()
-
-    # ------------------------------------------------------------------
-    def refresh(self):
-        """Пересчитать и отобразить цвет во всех трёх моделях."""
-        r, g, b = hsv_to_rgb(self.h, self.s, self.v)
+        """Установить цвет по RGB (применяется для палитры, кнопки, пипетки)."""
         ri = max(0, min(255, int(round(r))))
         gi = max(0, min(255, int(round(g))))
         bi = max(0, min(255, int(round(b))))
 
         c, m, y, k = rgb_to_cmyk(ri, gi, bi)
+        h, s, v = rgb_to_hsv(ri, gi, bi)
+        if s == 0.0:
+            h = self.h
+        self.h, self.s, self.v = h, s, v
 
         self.updating = True
         try:
-            self.rgb_ch["r"].set(ri)
-            self.rgb_ch["g"].set(gi)
-            self.rgb_ch["b"].set(bi)
-
-            self.cmyk_ch["c"].set(round(c * 100))
-            self.cmyk_ch["m"].set(round(m * 100))
-            self.cmyk_ch["y"].set(round(y * 100))
-            self.cmyk_ch["k"].set(round(k * 100))
-
-            self.hsv_ch["h"].set(round(self.h) % 360)
-            self.hsv_ch["s"].set(round(self.s * 100))
-            self.hsv_ch["v"].set(round(self.v * 100))
+            self._update_rgb_ui(ri, gi, bi)
+            self._update_cmyk_ui(c, m, y, k)
+            self._update_hsv_ui(self.h, self.s, self.v)
         finally:
             self.updating = False
 
-        hexs = "#%02X%02X%02X" % (ri, gi, bi)
-        self.preview.config(bg=hexs)
-        self.hex_var.set(hexs)
+        self._update_preview_and_hex(ri, gi, bi)
 
-    # ------------------------------------------------------------------
+    def on_channel_change(self, ch):
+        """Пользователь изменил одну из координат цвета."""
+        if self.updating:
+            return
+
+        self.updating = True
+        try:
+            if ch.model == "rgb":
+                ri = int(round(self.rgb_ch["r"].get()))
+                gi = int(round(self.rgb_ch["g"].get()))
+                bi = int(round(self.rgb_ch["b"].get()))
+
+                c, m, y, k = rgb_to_cmyk(ri, gi, bi)
+                h, s, v = rgb_to_hsv(ri, gi, bi)
+                if s == 0.0:
+                    h = self.h
+                self.h, self.s, self.v = h, s, v
+
+                self._update_cmyk_ui(c, m, y, k)
+                self._update_hsv_ui(self.h, self.s, self.v)
+
+            elif ch.model == "cmyk":
+                c = self.cmyk_ch["c"].get() / 100.0
+                m = self.cmyk_ch["m"].get() / 100.0
+                y = self.cmyk_ch["y"].get() / 100.0
+                k = self.cmyk_ch["k"].get() / 100.0
+
+                r, g, b = cmyk_to_rgb(c, m, y, k)
+                ri = max(0, min(255, int(round(r))))
+                gi = max(0, min(255, int(round(g))))
+                bi = max(0, min(255, int(round(b))))
+
+                h, s, v = rgb_to_hsv(ri, gi, bi)
+                if s == 0.0:
+                    h = self.h
+                self.h, self.s, self.v = h, s, v
+
+                # Обновляем RGB и HSV, введённые значения CMYK НЕ трогаем!
+                self._update_rgb_ui(ri, gi, bi)
+                self._update_hsv_ui(self.h, self.s, self.v)
+
+            else:  # hsv
+                if ch.key == "h":
+                    self.h = ch.get()
+                elif ch.key == "s":
+                    self.s = ch.get() / 100.0
+                else:
+                    self.v = ch.get() / 100.0
+
+                r, g, b = hsv_to_rgb(self.h, self.s, self.v)
+                ri = max(0, min(255, int(round(r))))
+                gi = max(0, min(255, int(round(g))))
+                bi = max(0, min(255, int(round(b))))
+
+                c, m, y, k = rgb_to_cmyk(ri, gi, bi)
+
+                self._update_rgb_ui(ri, gi, bi)
+                self._update_cmyk_ui(c, m, y, k)
+
+        finally:
+            self.updating = False
+
+        self._update_preview_and_hex(ri, gi, bi)
+
     def _on_hex(self, _=None):
         s = self.hex_var.get().strip().lstrip("#")
         if len(s) == 3:
@@ -329,7 +358,11 @@ class ColorApp:
             g = int(s[2:4], 16)
             b = int(s[4:6], 16)
         except (ValueError, IndexError):
-            self.refresh()
+            self._update_preview_and_hex(
+                int(self.rgb_ch["r"].get()),
+                int(self.rgb_ch["g"].get()),
+                int(self.rgb_ch["b"].get())
+            )
             return
         self.set_rgb(r, g, b)
 
@@ -344,8 +377,6 @@ class ColorApp:
                      random.randint(0, 255),
                      random.randint(0, 255))
 
-
-# =========================================================================
 
 if __name__ == "__main__":
     root = tk.Tk()
