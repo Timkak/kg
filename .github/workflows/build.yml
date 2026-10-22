@@ -1,42 +1,47 @@
-name: Build and Release Windows Executable
+name: Build Any Lab
 
 on:
-  push:
-    tags:
-      - 'v*' # Сработает автоматически, когда вы пушите тег с версией (например, v1.0, v2.0)
   workflow_dispatch:
+    inputs:
+      lab_folder:
+        description: 'Choose which lab to build:'
+        required: true
+        default: 'lab2'
+        type: choice
+        options:
+          - lab1
+          - lab2
+          - lab3
+          - lab4
 
 permissions:
-  contents: write # Дает права боту создавать Релизы
+  contents: write
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install PyQt6 opencv-python numpy pyinstaller
+          python -m pip install --upgrade pip pyinstaller
+          # Installs specific requirements if the file exists
+          if (Test-Path "${{ inputs.lab_folder }}/requirements.txt") {
+            pip install -r ${{ inputs.lab_folder }}/requirements.txt
+          }
 
-      - name: Build with PyInstaller
+      - name: Build Executable
         run: |
-          cd lab2
-          pyinstaller --onefile --windowed --name="Lab2_App" main.py
+          cd ${{ inputs.lab_folder }}
+          pyinstaller --onefile --windowed --name="${{ inputs.lab_folder }}_App" main.py
 
-      # Автоматическое создание релиза и загрузка .exe
-      - name: Create Release and Upload EXE
-        uses: softprops/action-gh-release@v2
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: lab2/dist/Lab2_App.exe
-          name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
+          name: ${{ inputs.lab_folder }}_Windows_Executable
+          path: ${{ inputs.lab_folder }}/dist/${{ inputs.lab_folder }}_App.exe
