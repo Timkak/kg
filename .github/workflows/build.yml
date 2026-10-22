@@ -1,0 +1,42 @@
+name: Build and Release Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v*' # Сработает автоматически, когда вы пушите тег с версией (например, v1.0, v2.0)
+  workflow_dispatch:
+
+permissions:
+  contents: write # Дает права боту создавать Релизы
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyQt6 opencv-python numpy pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          cd lab2
+          pyinstaller --onefile --windowed --name="Lab2_App" main.py
+
+      # Автоматическое создание релиза и загрузка .exe
+      - name: Create Release and Upload EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          files: lab2/dist/Lab2_App.exe
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
