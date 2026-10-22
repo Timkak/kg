@@ -1,14 +1,16 @@
-name: Build Windows Executable
+name: Build and Release Windows Executable
 
 on:
   push:
-    branches: [ "**" ] # Сработает при пуше в любую ветку (включая lab2)
-  pull_request:
-    branches: [ "main" ] # Сработает при создании Pull Request в main
+    tags:
+      - 'v*' # Сработает автоматически, когда вы пушите тег с версией (например, v1.0, v2.0)
   workflow_dispatch:
 
+permissions:
+  contents: write # Дает права боту создавать Релизы
+
 jobs:
-  build-windows:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
@@ -26,13 +28,15 @@ jobs:
           pip install PyQt6 opencv-python numpy pyinstaller
 
       - name: Build with PyInstaller
-        # Заходим в папку lab2 и собираем
         run: |
           cd lab2
           pyinstaller --onefile --windowed --name="Lab2_App" main.py
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      # Автоматическое создание релиза и загрузка .exe
+      - name: Create Release and Upload EXE
+        uses: softprops/action-gh-release@v2
         with:
-          name: Lab2_Windows_Executable
-          path: lab2/dist/Lab2_App.exe
+          files: lab2/dist/Lab2_App.exe
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
